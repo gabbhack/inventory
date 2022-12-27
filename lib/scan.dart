@@ -18,13 +18,21 @@ class ScannerPage extends StatefulWidget {
 }
 
 class _ScannerPageState extends State<ScannerPage> {
-  HashSet<int> items = HashSet();
+  late TextEditingController _controller;
+  HashSet<String> items = HashSet();
   late Database database;
   late SharedPreferences prefs;
+  final _formKey = GlobalKey<FormState>();
+
+  void onItemsAmountSubmit(int value) {
+    FocusManager.instance.primaryFocus?.unfocus();
+    _controller.clear();
+  }
 
   @override
   void initState() {
     super.initState();
+    _controller = TextEditingController();
     SharedPreferences.getInstance().then((value) {
       prefs = value;
       final path = prefs.getString("saveDir");
@@ -33,7 +41,8 @@ class _ScannerPageState extends State<ScannerPage> {
         version: 1,
         onCreate: (Database db, int version) async {
           await db.execute(
-              "CREATE TABLE IF NOT EXISTS full_table(Invent TEXT, Name TEXT,NumKab INTEGER, Count INTEGER);");
+              "CREATE TABLE IF NOT EXISTS full_table(Invent TEXT, Name TEXT, "
+                  "NumKab INTEGER, Count INTEGER);");
         },
       ).then((value) => database = value);
     });
@@ -41,7 +50,10 @@ class _ScannerPageState extends State<ScannerPage> {
 
   @override
   void dispose() {
-    database.close().then((value) => super.dispose());
+    database.close().then((value) {
+      _controller.dispose();
+      super.dispose();
+    });
   }
 
   Future<void> onFailedScan() async {
@@ -63,7 +75,7 @@ class _ScannerPageState extends State<ScannerPage> {
   Future<void> onCaptureCode(String data) async {
     final splitted = data.split("_");
     final cabinet = int.tryParse(splitted[0])!;
-    final item = int.tryParse(splitted[1])!;
+    final item = splitted[1];
     if (cabinet != widget.cabinet) {
       await showDialog<String>(
         context: context,
@@ -99,6 +111,56 @@ class _ScannerPageState extends State<ScannerPage> {
     } else {
       items.add(item);
       Vibration.vibrate();
+      await showDialog<String>(
+        context: context,
+        builder: (BuildContext context) => AlertDialog(
+          title: const Text('Уточните'),
+          content: Form(
+              key: _formKey,
+              child: Column(
+                children: [
+                  const Text('Введите количество предметов инвентаря'),
+                  TextFormField(
+                    validator: (value) {
+                      if (value == null ||
+                          value.isEmpty ||
+                          int.tryParse(value) == null) {
+                        return 'Введите число';
+                      } else {
+                        return null;
+                      }
+                    },
+                    controller: _controller,
+                    autofocus: true,
+                    cursorColor: Colors.white,
+                    textAlign: TextAlign.center,
+                    keyboardType: TextInputType.number,
+                    style: const TextStyle(color: Colors.white, fontSize: 25),
+                    decoration: const InputDecoration(
+                      fillColor: Colors.grey,
+                      filled: true,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.all(
+                          Radius.circular(20),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              )),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                if (_formKey.currentState!.validate()) {
+                  onItemsAmountSubmit(int.tryParse(_controller.text)!);
+                  Navigator.pop(context);
+                }
+              },
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
     }
   }
 
