@@ -3,6 +3,9 @@ import 'dart:collection';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sqflite/sqflite.dart';
+import 'package:vibration/vibration.dart';
 
 import 'components/gradient_container.dart';
 
@@ -16,6 +19,30 @@ class ScannerPage extends StatefulWidget {
 
 class _ScannerPageState extends State<ScannerPage> {
   HashSet<int> items = HashSet();
+  late Database database;
+  late SharedPreferences prefs;
+
+  @override
+  void initState() {
+    super.initState();
+    SharedPreferences.getInstance().then((value) {
+      prefs = value;
+      final path = prefs.getString("saveDir");
+      openDatabase(
+        path!,
+        version: 1,
+        onCreate: (Database db, int version) async {
+          await db.execute(
+              "CREATE TABLE IF NOT EXISTS full_table(Invent TEXT, Name TEXT,NumKab INTEGER, Count INTEGER);");
+        },
+      ).then((value) => database = value);
+    });
+  }
+
+  @override
+  void dispose() {
+    database.close().then((value) => super.dispose());
+  }
 
   Future<void> onFailedScan() async {
     await showDialog<String>(
@@ -71,8 +98,7 @@ class _ScannerPageState extends State<ScannerPage> {
       );
     } else {
       items.add(item);
-      HapticFeedback.heavyImpact();
-      HapticFeedback.heavyImpact();
+      Vibration.vibrate();
     }
   }
 
