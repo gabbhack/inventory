@@ -1,7 +1,6 @@
 import 'dart:collection';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite/sqflite.dart';
@@ -23,10 +22,12 @@ class _ScannerPageState extends State<ScannerPage> {
   late Database database;
   late SharedPreferences prefs;
   final _formKey = GlobalKey<FormState>();
+  bool isDialogOpen = false;
 
   void onItemsAmountSubmit(int value) {
     FocusManager.instance.primaryFocus?.unfocus();
     _controller.clear();
+    isDialogOpen = false;
   }
 
   @override
@@ -35,16 +36,18 @@ class _ScannerPageState extends State<ScannerPage> {
     _controller = TextEditingController();
     SharedPreferences.getInstance().then((value) {
       prefs = value;
-      final path = prefs.getString("saveDir");
+      final path = "${prefs.getString("saveDir")}/items.db";
       openDatabase(
-        path!,
+        path,
         version: 1,
         onCreate: (Database db, int version) async {
           await db.execute(
               "CREATE TABLE IF NOT EXISTS full_table(Invent TEXT, Name TEXT, "
-                  "NumKab INTEGER, Count INTEGER);");
+              "NumKab INTEGER, Count INTEGER);");
         },
-      ).then((value) => database = value);
+      ).then((value) {
+        return database = value;
+      });
     });
   }
 
@@ -57,17 +60,28 @@ class _ScannerPageState extends State<ScannerPage> {
   }
 
   Future<void> onFailedScan() async {
+    isDialogOpen = true;
     await showDialog<String>(
+      barrierDismissible: false,
       context: context,
-      builder: (BuildContext context) => AlertDialog(
-        title: const Text('Ой'),
-        content: const Text('Не удалось отсканировать код'),
-        actions: <Widget>[
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
-          ),
-        ],
+      builder: (BuildContext context) => WillPopScope(
+        onWillPop: () async {
+          isDialogOpen = false;
+          return true;
+        },
+        child: AlertDialog(
+          title: const Text('Ой'),
+          content: const Text('Не удалось отсканировать код'),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                isDialogOpen = false;
+              },
+              child: const Text('OK'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -77,50 +91,83 @@ class _ScannerPageState extends State<ScannerPage> {
     final cabinet = int.tryParse(splitted[0])!;
     final item = splitted[1];
     if (cabinet != widget.cabinet) {
+      isDialogOpen = true;
       await showDialog<String>(
         context: context,
-        builder: (BuildContext context) => AlertDialog(
-          title: const Text('Ой'),
-          content: Text('Предмет из кабинета $cabinet'),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('OK'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('ПЕРЕНЕСТИ'),
-            ),
-          ],
+        builder: (BuildContext context) => WillPopScope(
+          onWillPop: () async {
+            isDialogOpen = false;
+            return true;
+          },
+          child: AlertDialog(
+            title: const Text('Ой'),
+            content: Text('Предмет из кабинета $cabinet'),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  isDialogOpen = false;
+                },
+                child: const Text('OK'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  isDialogOpen = false;
+                },
+                child: const Text('ПЕРЕНЕСТИ'),
+              ),
+            ],
+          ),
         ),
       );
     } else if (items.contains(item)) {
+      isDialogOpen = true;
       await showDialog<String>(
         context: context,
-        builder: (BuildContext context) => AlertDialog(
-          title: const Text('Ой'),
-          content: const Text('Предмет уже отсканирован'),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('OK'),
-            ),
-          ],
+        builder: (BuildContext context) => WillPopScope(
+          onWillPop: () async {
+            isDialogOpen = false;
+            return true;
+          },
+          child: AlertDialog(
+            title: const Text('Ой'),
+            content: const Text('Предмет уже отсканирован'),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  isDialogOpen = false;
+                },
+                child: const Text('OK'),
+              ),
+            ],
+          ),
         ),
       );
     } else {
       items.add(item);
       Vibration.vibrate();
+      isDialogOpen = true;
       await showDialog<String>(
         context: context,
-        builder: (BuildContext context) => AlertDialog(
-          title: const Text('Уточните'),
-          content: Form(
-              key: _formKey,
-              child: Column(
-                children: [
-                  const Text('Введите количество предметов инвентаря'),
-                  TextFormField(
+        barrierDismissible: false,
+        builder: (BuildContext context) => WillPopScope(
+          onWillPop: () async {
+            isDialogOpen = false;
+            return true;
+          },
+          child: AlertDialog(
+            title: const Text('Уточните'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('Введите количество предметов инвентаря'),
+                const SizedBox(height: 50),
+                Form(
+                  onWillPop: () async => false,
+                  key: _formKey,
+                  child: TextFormField(
                     validator: (value) {
                       if (value == null ||
                           value.isEmpty ||
@@ -146,19 +193,22 @@ class _ScannerPageState extends State<ScannerPage> {
                       ),
                     ),
                   ),
-                ],
-              )),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () {
-                if (_formKey.currentState!.validate()) {
-                  onItemsAmountSubmit(int.tryParse(_controller.text)!);
-                  Navigator.pop(context);
-                }
-              },
-              child: const Text('OK'),
+                ),
+              ],
             ),
-          ],
+            actions: <Widget>[
+              TextButton(
+                onPressed: () {
+                  if (_formKey.currentState!.validate()) {
+                    onItemsAmountSubmit(int.tryParse(_controller.text)!);
+                    isDialogOpen = false;
+                    Navigator.pop(context);
+                  }
+                },
+                child: const Text('OK'),
+              ),
+            ],
+          ),
         ),
       );
     }
@@ -174,12 +224,15 @@ class _ScannerPageState extends State<ScannerPage> {
             Expanded(
               flex: 8,
               child: MobileScanner(
+                allowDuplicates: true,
                 onDetect: (barcode, _) async {
-                  if (barcode.rawValue == null) {
-                    await onFailedScan();
-                  } else {
-                    final String code = barcode.rawValue!;
-                    await onCaptureCode(code);
+                  if (!isDialogOpen) {
+                    if (barcode.rawValue == null) {
+                      await onFailedScan();
+                    } else {
+                      final String code = barcode.rawValue!;
+                      await onCaptureCode(code);
+                    }
                   }
                 },
               ),
