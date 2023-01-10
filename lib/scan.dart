@@ -1,5 +1,3 @@
-import 'dart:collection';
-
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -23,15 +21,80 @@ class _ScannerPageState extends State<ScannerPage> {
   final _formKey = GlobalKey<FormState>();
   bool isDialogOpen = false;
 
+  Future<int?> getItemsCount(BuildContext context) async {
+    return showDialog<int>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) => WillPopScope(
+        onWillPop: () async {
+          return false;
+        },
+        child: AlertDialog(
+          title: const Text('Уточните'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Введите количество предметов инвентаря'),
+              const SizedBox(height: 50),
+              Form(
+                onWillPop: () async => false,
+                key: _formKey,
+                child: TextFormField(
+                  validator: (value) {
+                    if (value == null ||
+                        value.isEmpty ||
+                        int.tryParse(value) == null) {
+                      return 'Введите число';
+                    } else {
+                      return null;
+                    }
+                  },
+                  controller: _controller,
+                  autofocus: true,
+                  cursorColor: Colors.white,
+                  textAlign: TextAlign.center,
+                  keyboardType: TextInputType.number,
+                  style: const TextStyle(color: Colors.white, fontSize: 25),
+                  decoration: const InputDecoration(
+                    fillColor: Colors.grey,
+                    filled: true,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.all(
+                        Radius.circular(20),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                if (_formKey.currentState!.validate()) {
+                  isDialogOpen = false;
+                  Navigator.pop(context, int.tryParse(_controller.text));
+                }
+              },
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> onItemsAmountSubmit(int count, int cabinet, String item) async {
     FocusManager.instance.primaryFocus?.unfocus();
     _controller.clear();
     isDialogOpen = false;
-    await database.transaction((txn) => txn.rawQuery("INSERT INTO full_table VALUES (?,?,?)", [item, cabinet, count]));
+    await database.transaction((txn) => txn.rawQuery(
+        "INSERT INTO full_table VALUES (?,?,?)", [item, cabinet, count]));
   }
 
   Future<bool> isItemInDatabase(String item) async {
-    final count = Sqflite.firstIntValue(await database.rawQuery("SELECT COUNT(*) FROM full_table WHERE Invent = ?", [item]));
+    final count = Sqflite.firstIntValue(await database
+        .rawQuery("SELECT COUNT(*) FROM full_table WHERE Invent = ?", [item]));
     return count != 0;
   }
 
@@ -46,8 +109,7 @@ class _ScannerPageState extends State<ScannerPage> {
         path,
         version: 1,
         onCreate: (Database db, int version) async {
-          await db.execute(
-              "CREATE TABLE full_table(Invent TEXT, "
+          await db.execute("CREATE TABLE full_table(Invent TEXT, "
               "NumKab INTEGER, Count INTEGER);");
         },
       ).then((value) {
@@ -65,7 +127,7 @@ class _ScannerPageState extends State<ScannerPage> {
 
   Future<void> onFailedScan() async {
     isDialogOpen = true;
-    await showDialog<String>(
+    await showDialog<void>(
       barrierDismissible: false,
       context: context,
       builder: (BuildContext context) => WillPopScope(
@@ -96,8 +158,32 @@ class _ScannerPageState extends State<ScannerPage> {
     final item = splitted[1];
     final itemInDb = await isItemInDatabase(item);
     isDialogOpen = true;
-    if (cabinet != widget.cabinet) {
-      await showDialog<String>(
+    if (itemInDb) {
+      await showDialog<void>(
+        context: context,
+        builder: (BuildContext context) =>
+            WillPopScope(
+              onWillPop: () async {
+                isDialogOpen = false;
+                return true;
+              },
+              child: AlertDialog(
+                title: const Text('Ой'),
+                content: const Text('Предмет уже отсканирован'),
+                actions: <Widget>[
+                  TextButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      isDialogOpen = false;
+                    },
+                    child: const Text('OK'),
+                  ),
+                ],
+              ),
+            ),
+      );
+    } else if (cabinet != widget.cabinet) {
+      await showDialog<void>(
         context: context,
         builder: (BuildContext context) => WillPopScope(
           onWillPop: () async {
@@ -109,8 +195,13 @@ class _ScannerPageState extends State<ScannerPage> {
             actions: <Widget>[
               TextButton(
                 onPressed: () {
-                  Navigator.pop(context);
-                  isDialogOpen = false;
+                  getItemsCount(context).then(
+                    (value) => onItemsAmountSubmit(value!, cabinet, item)
+                        .then((value) {
+                      Navigator.pop(context);
+                      isDialogOpen = false;
+                    }),
+                  );
                 },
                 child: const Text('OK'),
               ),
@@ -125,93 +216,10 @@ class _ScannerPageState extends State<ScannerPage> {
           ),
         ),
       );
-    } else if (itemInDb) {
-      await showDialog<String>(
-        context: context,
-        builder: (BuildContext context) => WillPopScope(
-          onWillPop: () async {
-            isDialogOpen = false;
-            return true;
-          },
-          child: AlertDialog(
-            title: const Text('Ой'),
-            content: const Text('Предмет уже отсканирован'),
-            actions: <Widget>[
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  isDialogOpen = false;
-                },
-                child: const Text('OK'),
-              ),
-            ],
-          ),
-        ),
-      );
     } else {
       Vibration.vibrate();
-      await showDialog<String>(
-        context: context,
-        barrierDismissible: false,
-        builder: (BuildContext context) => WillPopScope(
-          onWillPop: () async {
-            isDialogOpen = false;
-            return true;
-          },
-          child: AlertDialog(
-            title: const Text('Уточните'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text('Введите количество предметов инвентаря'),
-                const SizedBox(height: 50),
-                Form(
-                  onWillPop: () async => false,
-                  key: _formKey,
-                  child: TextFormField(
-                    validator: (value) {
-                      if (value == null ||
-                          value.isEmpty ||
-                          int.tryParse(value) == null) {
-                        return 'Введите число';
-                      } else {
-                        return null;
-                      }
-                    },
-                    controller: _controller,
-                    autofocus: true,
-                    cursorColor: Colors.white,
-                    textAlign: TextAlign.center,
-                    keyboardType: TextInputType.number,
-                    style: const TextStyle(color: Colors.white, fontSize: 25),
-                    decoration: const InputDecoration(
-                      fillColor: Colors.grey,
-                      filled: true,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.all(
-                          Radius.circular(20),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            actions: <Widget>[
-              TextButton(
-                onPressed: () {
-                  if (_formKey.currentState!.validate()) {
-                    onItemsAmountSubmit(int.tryParse(_controller.text)!, cabinet, item);
-                    isDialogOpen = false;
-                    Navigator.pop(context);
-                  }
-                },
-                child: const Text('OK'),
-              ),
-            ],
-          ),
-        ),
-      );
+      final count = await getItemsCount(context);
+      await onItemsAmountSubmit(count!, cabinet, item);
     }
   }
 
