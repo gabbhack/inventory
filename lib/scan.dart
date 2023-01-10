@@ -8,6 +8,7 @@ import 'components/gradient_container.dart';
 
 class ScannerPage extends StatefulWidget {
   const ScannerPage({super.key, required this.cabinet});
+
   final int cabinet;
 
   @override

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final Widget onPressed;
+
   const CustomAppBar({super.key, required this.onPressed});
 
   @override
