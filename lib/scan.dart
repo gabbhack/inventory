@@ -18,16 +18,21 @@ class ScannerPage extends StatefulWidget {
 
 class _ScannerPageState extends State<ScannerPage> {
   late TextEditingController _controller;
-  HashSet<String> items = HashSet();
   late Database database;
   late SharedPreferences prefs;
   final _formKey = GlobalKey<FormState>();
   bool isDialogOpen = false;
 
-  void onItemsAmountSubmit(int value) {
+  Future<void> onItemsAmountSubmit(int count, int cabinet, String item) async {
     FocusManager.instance.primaryFocus?.unfocus();
     _controller.clear();
     isDialogOpen = false;
+    await database.transaction((txn) => txn.rawQuery("INSERT INTO full_table VALUES (?,?,?)", [item, cabinet, count]));
+  }
+
+  Future<bool> isItemInDatabase(String item) async {
+    final count = Sqflite.firstIntValue(await database.rawQuery("SELECT COUNT(*) FROM full_table WHERE Invent = ?", [item]));
+    return count != 0;
   }
 
   @override
@@ -42,7 +47,7 @@ class _ScannerPageState extends State<ScannerPage> {
         version: 1,
         onCreate: (Database db, int version) async {
           await db.execute(
-              "CREATE TABLE IF NOT EXISTS full_table(Invent TEXT, Name TEXT, "
+              "CREATE TABLE full_table(Invent TEXT, "
               "NumKab INTEGER, Count INTEGER);");
         },
       ).then((value) {
@@ -53,10 +58,9 @@ class _ScannerPageState extends State<ScannerPage> {
 
   @override
   void dispose() {
-    database.close().then((value) {
-      _controller.dispose();
-      super.dispose();
-    });
+    database.close();
+    _controller.dispose();
+    super.dispose();
   }
 
   Future<void> onFailedScan() async {
@@ -90,14 +94,14 @@ class _ScannerPageState extends State<ScannerPage> {
     final splitted = data.split("_");
     final cabinet = int.tryParse(splitted[0])!;
     final item = splitted[1];
+    final itemInDb = await isItemInDatabase(item);
+    isDialogOpen = true;
     if (cabinet != widget.cabinet) {
-      isDialogOpen = true;
       await showDialog<String>(
         context: context,
         builder: (BuildContext context) => WillPopScope(
           onWillPop: () async {
-            isDialogOpen = false;
-            return true;
+            return false;
           },
           child: AlertDialog(
             title: const Text('Ой'),
@@ -121,8 +125,7 @@ class _ScannerPageState extends State<ScannerPage> {
           ),
         ),
       );
-    } else if (items.contains(item)) {
-      isDialogOpen = true;
+    } else if (itemInDb) {
       await showDialog<String>(
         context: context,
         builder: (BuildContext context) => WillPopScope(
@@ -146,9 +149,7 @@ class _ScannerPageState extends State<ScannerPage> {
         ),
       );
     } else {
-      items.add(item);
       Vibration.vibrate();
-      isDialogOpen = true;
       await showDialog<String>(
         context: context,
         barrierDismissible: false,
@@ -200,7 +201,7 @@ class _ScannerPageState extends State<ScannerPage> {
               TextButton(
                 onPressed: () {
                   if (_formKey.currentState!.validate()) {
-                    onItemsAmountSubmit(int.tryParse(_controller.text)!);
+                    onItemsAmountSubmit(int.tryParse(_controller.text)!, cabinet, item);
                     isDialogOpen = false;
                     Navigator.pop(context);
                   }
@@ -227,6 +228,7 @@ class _ScannerPageState extends State<ScannerPage> {
                 allowDuplicates: true,
                 onDetect: (barcode, _) async {
                   if (!isDialogOpen) {
+                    isDialogOpen = true;
                     if (barcode.rawValue == null) {
                       await onFailedScan();
                     } else {
