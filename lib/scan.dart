@@ -128,7 +128,7 @@ class _ScannerPageState extends State<ScannerPage> {
               "NumKab INTEGER, Count INTEGER);");
         },
       ).then((value) {
-        return database = value;
+        database = value;
       });
     });
   }
@@ -221,7 +221,7 @@ class _ScannerPageState extends State<ScannerPage> {
               TextButton(
                 onPressed: () {
                   getItemsCount(context).then(
-                    (value) => onItemsAmountSubmit(value!, cabinet, item)
+                    (value) => onItemsAmountSubmit(value!, widget.cabinet, item)
                         .then((value) {
                       Navigator.pop(context);
                       isDialogOpen = false;
