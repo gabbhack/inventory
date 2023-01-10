@@ -4,7 +4,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:untitled/cabinet_number.dart';
 import 'package:file_picker/file_picker.dart';
 
+import 'components/appbar.dart';
 import 'components/gradient_container.dart';
+import 'cabinets.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -24,6 +26,9 @@ class HomePage extends StatelessWidget {
     return GradientContainer(
       colors: superGradientColors,
       child: Scaffold(
+        appBar: const CustomAppBar(
+          onPressed: Cabinets(),
+        ),
         body: Center(
           child: TextButton(
             onPressed: () {

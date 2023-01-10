@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:untitled/components/appbar.dart';
 import 'package:untitled/scan.dart';
 
 import 'components/gradient_container.dart';
+import 'cabinets.dart';
 
 class CabinetNumberPage extends StatefulWidget {
   const CabinetNumberPage({super.key});
@@ -45,6 +47,9 @@ class _CabinetNumberState extends State<CabinetNumberPage> {
     return GradientContainer(
       colors: superGradientColors,
       child: Scaffold(
+        appBar: const CustomAppBar(
+          onPressed: Cabinets(),
+        ),
         body: Form(
           key: _formKey,
           child: Center(
