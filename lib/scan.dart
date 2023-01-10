@@ -88,14 +88,29 @@ class _ScannerPageState extends State<ScannerPage> {
     FocusManager.instance.primaryFocus?.unfocus();
     _controller.clear();
     isDialogOpen = false;
-    await database.transaction((txn) => txn.rawQuery(
-        "INSERT INTO full_table VALUES (?,?,?)", [item, cabinet, count]));
+    await database.transaction(
+      (txn) => txn.rawQuery(
+        "INSERT INTO full_table VALUES (?,?,?)",
+        [item, cabinet, count],
+      ),
+    );
   }
 
   Future<bool> isItemInDatabase(String item) async {
-    final count = Sqflite.firstIntValue(await database
-        .rawQuery("SELECT COUNT(*) FROM full_table WHERE Invent = ?", [item]));
+    final count = Sqflite.firstIntValue(
+      await database.rawQuery(
+        "SELECT COUNT(*) FROM full_table WHERE Invent = ?",
+        [item],
+      ),
+    );
     return count != 0;
+  }
+
+  Future<void> deleteItemFromDatabase(String item) async {
+    await database.rawQuery(
+      "DELETE FROM full_table WHERE Invent = ?",
+      [item],
+    );
   }
 
   @override
@@ -161,26 +176,36 @@ class _ScannerPageState extends State<ScannerPage> {
     if (itemInDb) {
       await showDialog<void>(
         context: context,
-        builder: (BuildContext context) =>
-            WillPopScope(
-              onWillPop: () async {
-                isDialogOpen = false;
-                return true;
-              },
-              child: AlertDialog(
-                title: const Text('Ой'),
-                content: const Text('Предмет уже отсканирован'),
-                actions: <Widget>[
-                  TextButton(
-                    onPressed: () {
+        builder: (BuildContext context) => WillPopScope(
+          onWillPop: () async {
+            isDialogOpen = false;
+            return true;
+          },
+          child: AlertDialog(
+            title: const Text('Ой'),
+            content: const Text('Предмет уже отсканирован'),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  isDialogOpen = false;
+                },
+                child: const Text('OK'),
+              ),
+              TextButton(
+                onPressed: () {
+                  deleteItemFromDatabase(item).then(
+                    (value) {
                       Navigator.pop(context);
                       isDialogOpen = false;
                     },
-                    child: const Text('OK'),
-                  ),
-                ],
-              ),
-            ),
+                  );
+                },
+                child: const Text('Удалить'),
+              )
+            ],
+          ),
+        ),
       );
     } else if (cabinet != widget.cabinet) {
       await showDialog<void>(
