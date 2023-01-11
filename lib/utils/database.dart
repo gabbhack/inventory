@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:csv/csv.dart';
 import 'package:device_info_plus/device_info_plus.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 
 class DatabaseSingleton {
@@ -11,11 +11,6 @@ class DatabaseSingleton {
   late String deviceName;
 
   DatabaseSingleton._private();
-
-  Future<String> getSavePath() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString("saveDir")!;
-  }
 
   Future<void> exportCSV() async {
     final rawResult = await database.transaction(
@@ -37,7 +32,8 @@ class DatabaseSingleton {
         await getDatabasesPath().then((value) => "$value/database.sqlite");
     deviceName =
         await DeviceInfoPlugin().androidInfo.then((value) => value.model);
-    savePath = await getSavePath();
+    savePath =
+        await getApplicationDocumentsDirectory().then((value) => value.path);
     database = await openDatabase(
       databasePath,
       version: 1,

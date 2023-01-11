@@ -19,6 +19,8 @@ dependencies:
   vibration: ^1.7.6
   device_info_plus: ^8.0.0
   csv: ^5.0.1
+  path_provider: ^2.0.11
+  share_plus: ^6.3.0
 
 dev_dependencies:
   flutter_test:
