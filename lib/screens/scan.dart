@@ -204,6 +204,7 @@ class _ScannerPageState extends State<ScannerPage> {
       );
     } else {
       Vibration.vibrate();
+      if (!mounted) return;
       final count = await getItemsCount(context);
       await onItemsAmountSubmit(count!, cabinet, item);
     }
