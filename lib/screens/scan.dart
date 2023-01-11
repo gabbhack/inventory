@@ -133,7 +133,7 @@ class _ScannerPageState extends State<ScannerPage> {
     final splitted = data.split("_");
     final cabinet = int.tryParse(splitted[0])!;
     final item = splitted[1];
-    final itemInDb = await database.checkItem(item);
+    final itemInDb = await database.checkItem(cabinet, item);
     isDialogOpen = true;
     if (itemInDb) {
       if (!mounted) return;
@@ -158,7 +158,7 @@ class _ScannerPageState extends State<ScannerPage> {
               ),
               TextButton(
                 onPressed: () {
-                  database.deleteItem(item).then(
+                  database.deleteItem(cabinet, item).then(
                     (value) {
                       if (!mounted) return;
                       Navigator.pop(context);

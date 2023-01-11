@@ -61,23 +61,23 @@ class DatabaseSingleton {
     await exportCSV();
   }
 
-  Future<bool> checkItem(String item) {
+  Future<bool> checkItem(int cabinet, String item) {
     return database
         .transaction(
           (txn) => txn.rawQuery(
-            "SELECT COUNT(*) FROM full_table WHERE Invent = ?",
-            [item],
+            "SELECT COUNT(*) FROM full_table WHERE Invent = ? AND NumKab = ?",
+            [item, cabinet],
           ),
         )
         .then((value) => Sqflite.firstIntValue(value))
         .then((value) => value != 0);
   }
 
-  Future<void> deleteItem(String item) async {
+  Future<void> deleteItem(int cabinet, String item) async {
     await database.transaction(
       (txn) => txn.rawQuery(
-        "DELETE FROM full_table WHERE Invent = ?",
-        [item],
+        "DELETE FROM full_table WHERE Invent = ? AND NumKab = ?",
+        [item, cabinet],
       ),
     );
     await exportCSV();
