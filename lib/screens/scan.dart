@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:sqflite/sqflite.dart';
+import 'package:untitled/utils/database.dart';
 import 'package:vibration/vibration.dart';
 
-import 'components/gradient_container.dart';
+import '../components/gradient_container.dart';
 
 class ScannerPage extends StatefulWidget {
   const ScannerPage({super.key, required this.cabinet});
@@ -17,8 +16,6 @@ class ScannerPage extends StatefulWidget {
 
 class _ScannerPageState extends State<ScannerPage> {
   late TextEditingController _controller;
-  late Database database;
-  late SharedPreferences prefs;
   final _formKey = GlobalKey<FormState>();
   bool isDialogOpen = false;
 
@@ -89,54 +86,17 @@ class _ScannerPageState extends State<ScannerPage> {
     FocusManager.instance.primaryFocus?.unfocus();
     _controller.clear();
     isDialogOpen = false;
-    await database.transaction(
-      (txn) => txn.rawQuery(
-        "INSERT INTO full_table VALUES (?,?,?)",
-        [item, cabinet, count],
-      ),
-    );
-  }
-
-  Future<bool> isItemInDatabase(String item) async {
-    final count = Sqflite.firstIntValue(
-      await database.rawQuery(
-        "SELECT COUNT(*) FROM full_table WHERE Invent = ?",
-        [item],
-      ),
-    );
-    return count != 0;
-  }
-
-  Future<void> deleteItemFromDatabase(String item) async {
-    await database.rawQuery(
-      "DELETE FROM full_table WHERE Invent = ?",
-      [item],
-    );
+    await database.insertItem(count, cabinet, item);
   }
 
   @override
   void initState() {
     super.initState();
     _controller = TextEditingController();
-    SharedPreferences.getInstance().then((value) {
-      prefs = value;
-      final path = "${prefs.getString("saveDir")}/items.db";
-      openDatabase(
-        path,
-        version: 1,
-        onCreate: (Database db, int version) async {
-          await db.execute("CREATE TABLE full_table(Invent TEXT, "
-              "NumKab INTEGER, Count INTEGER);");
-        },
-      ).then((value) {
-        database = value;
-      });
-    });
   }
 
   @override
   void dispose() {
-    database.close();
     _controller.dispose();
     super.dispose();
   }
@@ -172,7 +132,7 @@ class _ScannerPageState extends State<ScannerPage> {
     final splitted = data.split("_");
     final cabinet = int.tryParse(splitted[0])!;
     final item = splitted[1];
-    final itemInDb = await isItemInDatabase(item);
+    final itemInDb = await database.checkItem(item);
     isDialogOpen = true;
     if (itemInDb) {
       await showDialog<void>(
@@ -195,7 +155,7 @@ class _ScannerPageState extends State<ScannerPage> {
               ),
               TextButton(
                 onPressed: () {
-                  deleteItemFromDatabase(item).then(
+                  database.deleteItem(item).then(
                     (value) {
                       Navigator.pop(context);
                       isDialogOpen = false;

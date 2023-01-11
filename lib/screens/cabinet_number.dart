@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:untitled/components/appbar.dart';
-import 'package:untitled/scan.dart';
-
-import 'cabinets.dart';
-import 'components/gradient_container.dart';
+import 'package:untitled/components/gradient_container.dart';
+import 'package:untitled/screens/cabinets.dart';
+import 'package:untitled/screens/scan.dart';
 
 class CabinetNumberPage extends StatefulWidget {
   const CabinetNumberPage({super.key});

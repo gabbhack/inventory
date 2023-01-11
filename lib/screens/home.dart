@@ -1,25 +1,11 @@
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:untitled/cabinet_number.dart';
-
-import 'cabinets.dart';
-import 'components/appbar.dart';
-import 'components/gradient_container.dart';
+import 'package:untitled/components/appbar.dart';
+import 'package:untitled/components/gradient_container.dart';
+import 'package:untitled/screens/cabinet_number.dart';
+import 'package:untitled/screens/cabinets.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
-
-  Future<void> getPermissions() async {
-    await Permission.camera.request();
-    final prefs = await SharedPreferences.getInstance();
-    String? selectedDirectory = prefs.getString("saveDir");
-    while (selectedDirectory == null) {
-      selectedDirectory = await FilePicker.platform.getDirectoryPath();
-    }
-    await prefs.setString("saveDir", selectedDirectory);
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +18,6 @@ class HomePage extends StatelessWidget {
         body: Center(
           child: TextButton(
             onPressed: () {
-              getPermissions();
               Navigator.push(
                 context,
                 MaterialPageRoute<void>(

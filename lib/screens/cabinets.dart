@@ -1,8 +1,6 @@
 import "package:flutter/material.dart";
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:sqflite/sqflite.dart';
-
-import 'components/gradient_container.dart';
+import 'package:untitled/components/gradient_container.dart';
+import 'package:untitled/utils/database.dart';
 
 class Cabinets extends StatefulWidget {
   const Cabinets({Key? key}) : super(key: key);
@@ -12,39 +10,9 @@ class Cabinets extends StatefulWidget {
 }
 
 class _CabinetsState extends State<Cabinets> {
-  Future<Database> getDatabase() async {
-    final prefs = await SharedPreferences.getInstance();
-    final path = "${prefs.getString("saveDir")}/items.db";
-    final database = await openDatabase(
-      path,
-      version: 1,
-      onCreate: (Database db, int version) async {
-        await db.execute("CREATE TABLE full_table(Invent TEXT, "
-            "NumKab INTEGER, Count INTEGER);");
-      },
-    );
-    return database;
-  }
-
-  Future<List<int>> getCabs() async {
-    final database = await getDatabase();
-    final list = await database
-        .rawQuery("SELECT NumKab FROM full_table GROUP BY NumKab");
-    await database.close();
-    return list.map((e) => e.values.first! as int).toList();
-  }
-
-  Future<void> deleteCab(int cab) async {
-    final database = await getDatabase();
-    await database.rawQuery(
-      "DELETE FROM full_table WHERE NumKab = ?",
-      [cab],
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    var future = getCabs();
+    var future = database.cabinets();
     return FutureBuilder<List<int>>(
       future: future,
       builder: (BuildContext context, AsyncSnapshot<List<int>> snapshot) {
@@ -64,9 +32,9 @@ class _CabinetsState extends State<Cabinets> {
                 itemBuilder: (context, index) => ListTile(
                   trailing: GestureDetector(
                     onTap: () async {
-                      await deleteCab(snapshot.data![index]);
+                      await database.deleteCabinet(snapshot.data![index]);
                       setState(() {
-                        future = getCabs();
+                        future = database.cabinets();
                       });
                     },
                     child: const Icon(

@@ -1,8 +1,20 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:untitled/screens/home.dart';
+import 'package:untitled/utils/database.dart';
 
-import 'home.dart';
-
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Permission.camera.request();
+  final prefs = await SharedPreferences.getInstance();
+  String? selectedDirectory = prefs.getString("saveDir");
+  while (selectedDirectory == null) {
+    selectedDirectory = await FilePicker.platform.getDirectoryPath();
+  }
+  await prefs.setString("saveDir", selectedDirectory);
+  await database.init();
   runApp(const App());
 }
 
