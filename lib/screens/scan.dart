@@ -117,6 +117,7 @@ class _ScannerPageState extends State<ScannerPage> {
           actions: <Widget>[
             TextButton(
               onPressed: () {
+                if (!mounted) return;
                 Navigator.pop(context);
                 isDialogOpen = false;
               },
@@ -135,6 +136,7 @@ class _ScannerPageState extends State<ScannerPage> {
     final itemInDb = await database.checkItem(item);
     isDialogOpen = true;
     if (itemInDb) {
+      if (!mounted) return;
       await showDialog<void>(
         context: context,
         builder: (BuildContext context) => WillPopScope(
@@ -148,6 +150,7 @@ class _ScannerPageState extends State<ScannerPage> {
             actions: <Widget>[
               TextButton(
                 onPressed: () {
+                  if (!mounted) return;
                   Navigator.pop(context);
                   isDialogOpen = false;
                 },
@@ -157,6 +160,7 @@ class _ScannerPageState extends State<ScannerPage> {
                 onPressed: () {
                   database.deleteItem(item).then(
                     (value) {
+                      if (!mounted) return;
                       Navigator.pop(context);
                       isDialogOpen = false;
                     },
@@ -169,6 +173,7 @@ class _ScannerPageState extends State<ScannerPage> {
         ),
       );
     } else if (cabinet != widget.cabinet) {
+      if (!mounted) return;
       await showDialog<void>(
         context: context,
         builder: (BuildContext context) => WillPopScope(
@@ -184,6 +189,7 @@ class _ScannerPageState extends State<ScannerPage> {
                   getItemsCount(context).then(
                     (value) => onItemsAmountSubmit(value!, widget.cabinet, item)
                         .then((value) {
+                      if (!mounted) return;
                       Navigator.pop(context);
                       isDialogOpen = false;
                     }),
@@ -193,6 +199,7 @@ class _ScannerPageState extends State<ScannerPage> {
               ),
               TextButton(
                 onPressed: () {
+                  if (!mounted) return;
                   Navigator.pop(context);
                   isDialogOpen = false;
                 },
@@ -238,6 +245,7 @@ class _ScannerPageState extends State<ScannerPage> {
               flex: 2,
               child: TextButton(
                 onPressed: () {
+                  if (!mounted) return;
                   Navigator.pop(context);
                 },
                 style: ElevatedButton.styleFrom(
